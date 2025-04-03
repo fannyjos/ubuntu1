@@ -75,7 +75,132 @@ mydatabase> db.Users.find().pretty()
     method: 'PayPal'
   }
 ]
-mydatabase>
+
+
+
+
+
+
+
+
+
+
+1]
+db.Orders.aggregate([
+    {
+        $lookup: {
+            from: "Users",      
+            localField: "u_id",  
+            foreignField: "u_id",   
+            as: "user_info"    
+        }
+    },
+{
+   $unwind: "$user_info"  
+    },
+    {
+        $project: {
+            u_id: 1,
+            "user_info.name": 1,
+            p_id: 1,
+            qty: 1,
+            status: 1
+        }
+    }
+])
+
+output:
+[
+  {
+    _id: ObjectId('67ee07dd7e5a18e69e6b1411'),
+    u_id: 1,
+    p_id: 101,
+    qty: 1,
+    status: 'Delivered',
+    user_info: { name: 'Alice' }
+  }
+]
+
+
+2]
+db.Orders.aggregate([
+    {
+        $group: {
+            _id: "$u_id",  
+            totalOrders: { $sum: 1 }  
+        }
+    }
+])
+
+output:
+[ { _id: 2, totalOrders: 1 }, { _id: 1, totalOrders: 1 } ]
+
+
+
+3]
+db.Orders.aggregate([
+    { $sort: { qty: -1 } }  
+])
+
+output:
+[
+  {
+    _id: ObjectId('67ee07dd7e5a18e69e6b1412'),
+    o_id: 1002,
+    u_id: 2,
+    p_id: 103,
+    qty: 2,
+    status: 'Pending'
+  },
+  {
+    _id: ObjectId('67ee07dd7e5a18e69e6b1411'),
+    o_id: 1001,
+    u_id: 1,
+    p_id: 101,
+    qty: 1,
+    status: 'Delivered'
+  }
+]
+
+
+4]
+db.Orders.aggregate([
+    {
+        $lookup: {
+            from: "Products",
+            localField: "p_id",
+            foreignField: "p_id",
+            as: "product_details"
+        }
+    },
+    { $unwind: "$product_details" },
+    {
+        $group: {
+            _id: "$p_id",
+            totalRevenue: { $sum: { $multiply: ["$qty", "$product_details.price"] } }
+        }
+    },
+    { $sort: { totalRevenue: -1 } }  
+])
+
+output:
+[ { _id: 101, totalRevenue: 1000 }, { _id: 103, totalRevenue: 160 } ]
+
+
+5]
+db.Orders.aggregate([
+    { $match: { status: "Delivered" } }, 
+    {
+        $group: {
+            _id: null,
+            totalSales: { $sum: "$qty" }
+        }
+    }
+])
+
+output:
+[ { _id: null, totalSales: 1 } ]
+
 
 
 
